@@ -1,0 +1,29 @@
+{
+  "name": "bun-load-balancer",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "build-child-windows-x64": "bun build --target=bun-windows-x64 './servers/child/index.ts' --compile --outfile ./dist/win32/x64/child_server",
+    "build-master-windows-x64": "bun build --target=bun-windows-x64 './servers/master/index.ts' --compile --outfile ./dist/win32/x64/master_server",
+    "build-child-windows": "bun build-child-windows-x64",
+    "build-master-windows": "bun build-master-windows-x64",
+    "build-windows": "bun build-child-windows && bun build-master-windows",
+    "build-child-linux-x64": "bun build --target=bun-linux-x64 './servers/child/index.ts' --compile --outfile ./dist/linux/x64/child_server",
+    "build-master-linux-x64": "bun build --target=bun-linux-x64 './servers/master/index.ts' --compile --outfile ./dist/linux/x64/master_server",
+    "build-child-linux": "bun build-child-linux-x64",
+    "build-master-linux": "bun build-master-linux-x64",
+    "build-linux": "bun build-child-linux && bun build-master-linux",
+    "build-child-darwin-x64": "bun build --target=bun-darwin-x64 './servers/child/index.ts' --compile --outfile ./dist/darwin/x64/child_server",
+    "build-master-darwin-x64": "bun build --target=bun-darwin-x64 './servers/master/index.ts' --compile --outfile ./dist/darwin/x64/master_server",
+    "build-child-darwin": "bun build-child-darwin-x64",
+    "build-master-darwin": "bun build-master-darwin-x64",
+    "build-darwin": "bun build-child-darwin && bun build-master-darwin",
+    "build": "bun build-windows && bun build-linux && bun build-darwin"
+  }
+}
