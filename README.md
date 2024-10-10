@@ -6,10 +6,24 @@ To install dependencies:
 bun install
 ```
 
-To run:
-
-```bash
-bun run index.ts
+Build for windows:
+```
+bun run build-windows
 ```
 
-This project was created using `bun init` in bun v1.1.12. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+Build for linux:
+```
+bun run build-linux
+```
+
+Build for Darwin:
+```
+bun run build-darwin
+```
+
+Build for all operating systems:
+```
+bun run build
+```
+
+More detailed build steps are located in the **package.json** file
