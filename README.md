@@ -27,3 +27,9 @@ bun run build
 ```
 
 More detailed build steps are located in the **package.json** file
+
+Required Environment Variables:
+```
+KEY
+ENCRYPTION_KEY
+```
