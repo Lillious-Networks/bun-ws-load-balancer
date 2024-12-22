@@ -2,7 +2,7 @@
 import os from "os";
 import encrypt from "../../modules/encrypt";
 import decrypt from "../../modules/decrypt";
-import child_process from "child_process";
+import { $ } from "bun";
 import transmit from "../../modules/transmitter";
 const workers = os.availableParallelism();
 import cluster from "cluster";
@@ -20,31 +20,26 @@ if (cluster.isPrimary) {
 } else {
   const socket = new WebSocket("ws://127.0.0.1:3000");
 
-  function getCPUUsage() {
+  async function getCPUUsage() {
     if (os.platform() === "win32") {
-      const result = parseInt(
-        child_process
-          .execSync("wmic cpu get loadpercentage")
-          .toString()
-          .split("\n")[1]
-      );
-      return result;
+      const result = await $`wmic cpu get loadpercentage`.text();
+      return result.toString().split("\n")[1];
     } else {
       return Math.round(Number(os.loadavg()[0]));
     }
   }
   
-  function getIpAddress() {
-    const process = child_process.spawnSync("curl", ["ifconfig.me"]);
-    return process.stdout.toString();
+  async function getIpAddress() {
+    const result = await $`curl ifconfig.me`.text();
+    return result.toString();
   }
   
-  socket.onopen = () => {
+  socket.onopen = async () => {
     socket.send(
       transmit.encode(
         JSON.stringify({
           data: null,
-          ip: getIpAddress(),
+          ip: await getIpAddress(),
           key: encrypt(process.env.KEY as string),
         })
       )
@@ -102,20 +97,20 @@ if (cluster.isPrimary) {
       process.exit(0);
     };
   
-    setInterval(() => {
+    setInterval(async () => {
       socket.send(
         transmit.encode(
           JSON.stringify({
             stats: {
               freeRam: os.freemem(),
-              cpuUsage: getCPUUsage() || 0,
+              cpuUsage: await getCPUUsage() || 0,
             },
             data: null,
             key: encrypt(process.env.KEY as string),
           })
         )
       );
-    }, 100);
+    }, 5000);
   };
   
   setTimeout(() => {

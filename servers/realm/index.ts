@@ -25,7 +25,6 @@ const socket = Bun.serve<any>({
       if (!Buffer.isBuffer(message)) return ws.close(1000, "Invalid packet received");
       const data = tryParsePacket(message.toString()) as any;
       if (!data) return ws.close(1000, "Invalid packet received");
-
       // Check if the key was passed
       if (!data.key) {
         ws.send(
