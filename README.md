@@ -8,22 +8,22 @@ bun install
 
 Build for windows:
 ```
-bun run build-windows
+bun build-windows
 ```
 
 Build for linux:
 ```
-bun run build-linux
+bun build-linux
 ```
 
 Build for Darwin:
 ```
-bun run build-darwin
+bun build-darwin
 ```
 
 Build for all operating systems:
 ```
-bun run build
+bun build
 ```
 
 More detailed build steps are located in the **package.json** file
