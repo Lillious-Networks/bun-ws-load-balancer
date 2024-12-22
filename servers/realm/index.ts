@@ -1,5 +1,4 @@
 // Listening server to route incoming connections to the appropriate server
-import crypto from "crypto";
 import encrypt from "../../modules/encrypt";
 import decrypt from "../../modules/decrypt";
 import transmit from "../../modules/transmitter";
@@ -9,12 +8,8 @@ const clientConnections = new Map<string, WebSocket>();
 
 const socket = Bun.serve<any>({
   fetch(req, Server) {
-    const id = crypto.randomBytes(32).toString("hex");
-    const stats = {
-      freeRam: null,
-      cpuUsage: null,
-    };
-    const success = Server.upgrade(req, { data: { id, stats } });
+    const id = Bun.randomUUIDv7();
+    const success = Server.upgrade(req, { data: { id } });
     return success
       ? undefined
       : new Response("WebSocket upgrade error", { status: 400 });
@@ -41,6 +36,7 @@ const socket = Bun.serve<any>({
         return;
       }
 
+      // Check if the key is valid
       if (decrypt(data.key) !== process.env.KEY) {
         ws.send(
           transmit.encode(
@@ -62,7 +58,6 @@ const socket = Bun.serve<any>({
         // Distribute the message back to the client that sent it
         const client = clientConnections.get(id);
         if (!client) return ws.close(1000, "Client not found");
-        console.log(`Distributing message to client ${id}`);
         // Strip the private key from the data
         data.key = undefined;
         client.send(transmit.encode(JSON.stringify(data)));
@@ -72,7 +67,7 @@ const socket = Bun.serve<any>({
       // Add the shard server to the list of servers if it doesn't exist
       if (!shardServers.has(ws.data.id)) {
         shardServers.set(ws.data.id, ws as unknown as WebSocket);
-        const ip = data.ip || ws.remoteAddress;
+        const ip = ws.remoteAddress;
         console.log(`Shard server ${ws.data.id} connected @ ${ip}`);
         ws.send(
           transmit.encode(
@@ -84,13 +79,6 @@ const socket = Bun.serve<any>({
             })
           )
         );
-      }
-
-      try {
-        let stats = data.stats;
-        ws.data.stats = stats;
-      } catch {
-        console.log("Error parsing stats from shard server");
       }
     },
     close(ws, code, reason) {
@@ -104,48 +92,22 @@ const socket = Bun.serve<any>({
 });
 console.log(`Realm server is running at ${socket.url}`);
 
+let lastChoice: WebSocket | null = null;
 function distribute() : WebSocket | null {
   let chosenServer: WebSocket | null = null;
   for (const shardServer of shardServers.values()) {
-    const stats = (shardServer as WebSocket & { data: any })?.data?.stats;
-    if (!stats?.cpuUsage || !stats?.freeRam) continue;
-    // Set the first server as the chosen server if it hasn't been set yet
-    if (!chosenServer) {
-      chosenServer = shardServer;
-    }
-    // Choose the server with the lowest CPU usage and the highest free RAM
-    // Compare the CPU usage and free RAM of the current server with the chosen server
-    // Keep searching for the server with the lowest CPU usage and the highest free RAM
-    if (
-      stats.cpuUsage <
-        (chosenServer as WebSocket & { data: any }).data.stats.cpuUsage &&
-      stats.freeRam >
-        (chosenServer as WebSocket & { data: any }).data.stats.freeRam
-    ) {
-      chosenServer = shardServer;
-    } else if (
-      stats.cpuUsage ===
-        (chosenServer as WebSocket & { data: any }).data.stats.cpuUsage &&
-      stats.freeRam >
-        (chosenServer as WebSocket & { data: any }).data.stats.freeRam
-    ) {
-      chosenServer = shardServer;
-    } else if (
-      stats.cpuUsage <
-        (chosenServer as WebSocket & { data: any }).data.stats.cpuUsage &&
-      stats.freeRam ===
-        (chosenServer as WebSocket & { data: any }).data.stats.freeRam
-    ) {
-      chosenServer = shardServer;
-    }
+    // Round robin the servers
+    if (shardServer === lastChoice) continue;
+    chosenServer = shardServer;
+    lastChoice = shardServer;
+    break;
   }
-  console.log(`Distributing task shard: ${(chosenServer as WebSocket & { data: any })?.data?.id}`);
   return chosenServer;
 }
 
 const server = Bun.serve<any>({
   fetch(req, Server) {
-    const id = crypto.randomBytes(16).toString("hex");
+    const id = Bun.randomUUIDv7();
     const success = Server.upgrade(req, { data: { id } });
     return success
       ? undefined
