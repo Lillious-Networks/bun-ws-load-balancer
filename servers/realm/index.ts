@@ -94,16 +94,17 @@ const socket = Bun.serve<any>({
 console.log(`Realm server is running at ${socket.url}`);
 
 let lastChoice: WebSocket | null = null;
-function distribute() : WebSocket | null {
-  let chosenServer: WebSocket | null = null;
-  for (const shardServer of shardServers.values()) {
-    // Round robin the servers
-    if (shardServer === lastChoice) continue;
-    chosenServer = shardServer;
-    lastChoice = shardServer;
-    break;
-  }
-  return chosenServer;
+function distribute(): WebSocket | null {
+  const servers = Array.from(shardServers.values());
+  if (servers.length === 0) return null;
+
+  // Find the index of the last chosen server
+  const lastIndex = lastChoice ? servers.indexOf(lastChoice) : -1;
+  // Choose the next server in a round-robin fashion
+  const nextIndex = (lastIndex + 1) % servers.length;
+  lastChoice = servers[nextIndex];
+
+  return lastChoice;
 }
 
 const server = Bun.serve<any>({
@@ -138,6 +139,8 @@ const server = Bun.serve<any>({
       // Message was not sent, send it off to retry
       if (Number(result) === 0) {
         retryDistribute(transmit.encode(JSON.stringify(data)), 0);
+      } else {
+        console.log(`Task sent to shard server ${(loadBalancer as any).data.id}`);
       }
     },
     close(ws, code, reason) {
@@ -160,6 +163,8 @@ function retryDistribute(data: any, attempt: number) {
   const result = loadBalancer.send(data);
   if (Number(result) === 0) {
     setTimeout(() => retryDistribute(data, attempt + 1), 10);
+  } else {
+    console.log(`Task sent to shard server ${(loadBalancer as any).data.id}`);
   }
 }
 

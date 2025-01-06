@@ -23,6 +23,9 @@ if (cluster.isPrimary) {
     }
 
     setInterval(() => {
+        if (Object.keys(cluster.workers as any).length === 0) {
+            process.exit(0);
+        }
         const totalMessages = Object.values(messageCounts).reduce((sum, count) => sum + count, 0);
         console.log(`Total messages per second: ${totalMessages}`);
     }, 1000);
@@ -51,6 +54,7 @@ if (cluster.isPrimary) {
     };
 
     socket.onclose = () => {
+        console.log("Connection closed");
         process.exit(0);
     };
 

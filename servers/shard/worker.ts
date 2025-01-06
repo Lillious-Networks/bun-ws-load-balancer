@@ -41,6 +41,7 @@ socket.onopen = async () => {
 
     // Proxy the task to the realm server
     if (data.mode === "DISTRIBUTED_TASK") {
+      console.log(`Received task: ${data.type} from realm server`);
       // Strip the original key from the data so we can re-encrypt it to ensure integrity
       data.key = undefined;
       switch (data.type) {
