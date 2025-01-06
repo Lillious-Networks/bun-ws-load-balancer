@@ -32,4 +32,7 @@ Required Environment Variables:
 ```
 KEY
 ENCRYPTION_KEY
+HOST
+REALM_PORT
+SHARD_PORT
 ```
