@@ -15,6 +15,7 @@ const socket = Bun.serve<any>({
       : new Response("WebSocket upgrade error", { status: 400 });
   },
   websocket: {
+    perMessageDeflate: true,
     message(ws, message: Buffer) {
       // Check if the message is a buffer 
       if (!Buffer.isBuffer(message)) return ws.close(1000, "Invalid packet received");
@@ -88,7 +89,7 @@ const socket = Bun.serve<any>({
       shardServers.delete(ws.data.id);
     },
   },
-  port: 3000,
+  port: process.env.REALM_PORT || 3000,
 });
 console.log(`Realm server is running at ${socket.url}`);
 
@@ -114,6 +115,7 @@ const server = Bun.serve<any>({
       : new Response("WebSocket upgrade error", { status: 400 });
   },
   websocket: {
+    perMessageDeflate: true,
     open(ws) {
       // Add the client connection to the list of connections
       clientConnections.set(ws.data.id, ws as unknown as WebSocket);
@@ -132,7 +134,11 @@ const server = Bun.serve<any>({
       data.mode = "DISTRIBUTED_TASK";
       data.id = ws.data.id;
       // Send the message to the chosen server
-      loadBalancer.send(transmit.encode(JSON.stringify(data)));
+      const result = loadBalancer.send(transmit.encode(JSON.stringify(data)));
+      // Message was not sent, send it off to retry
+      if (Number(result) === 0) {
+        retryDistribute(transmit.encode(JSON.stringify(data)), 0);
+      }
     },
     close(ws, code, reason) {
       reason = reason || "No reason provided";
@@ -141,10 +147,21 @@ const server = Bun.serve<any>({
       clientConnections.delete(ws.data.id);
     },
   },
-  port: 3001,
+  port: process.env.SHARD_PORT || 3001,
 })
+
 console.log(`Load balancer is running at ${server.url}`);
 
+function retryDistribute(data: any, attempt: number) {
+  // Retry 3 times before giving up
+  if (attempt > 3) return;
+  const loadBalancer = distribute() as unknown as WebSocket;
+  if (!loadBalancer) return; // No servers available
+  const result = loadBalancer.send(data);
+  if (Number(result) === 0) {
+    setTimeout(() => retryDistribute(data, attempt + 1), 10);
+  }
+}
 
 function tryParsePacket(data: any) {
   try {

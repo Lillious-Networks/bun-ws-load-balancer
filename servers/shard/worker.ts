@@ -2,8 +2,9 @@
 import encrypt from "../../modules/encrypt";
 import decrypt from "../../modules/decrypt";
 import transmit from "../../modules/transmitter";
-
-const socket = new WebSocket("ws://127.0.0.1:3000");
+const host = process.env.HOST || "localhost";
+const realmPort = process.env.REALM_PORT || 3000;
+const socket = new WebSocket(`ws://${host}:${realmPort}`);
 
 socket.onopen = async () => {
   socket.send(
