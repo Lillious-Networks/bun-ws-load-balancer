@@ -58,7 +58,7 @@ const socket = Bun.serve<any>({
         if (!id) return ws.close(1000, "No server ID provided");
         // Distribute the message back to the client that sent it
         const client = clientConnections.get(id);
-        if (!client) return ws.close(1000, "Client not found");
+        if (!client) return;
         // Strip the private key from the data
         data.key = undefined;
         client.send(transmit.encode(JSON.stringify(data)));
