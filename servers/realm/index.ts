@@ -2,6 +2,7 @@
 import encrypt from "../../modules/encrypt";
 import decrypt from "../../modules/decrypt";
 import transmit from "../../modules/transmitter";
+let messages = 0;
 
 const shardServers = new Map<string, WebSocket>();
 const clientConnections = new Map<string, WebSocket>();
@@ -122,6 +123,7 @@ const server = Bun.serve<any>({
       clientConnections.set(ws.data.id, ws as unknown as WebSocket);
     },
     message(ws, message: Buffer) {
+      messages++;
       // Check if the message is a buffer 
       if (!Buffer.isBuffer(message)) return ws.close(1000, "Invalid packet received");
       const data = tryParsePacket(message.toString()) as any;
@@ -140,7 +142,7 @@ const server = Bun.serve<any>({
       if (Number(result) === 0) {
         retryDistribute(transmit.encode(JSON.stringify(data)), 0);
       } else {
-        console.log(`Task sent to shard server ${(loadBalancer as any).data.id}`);
+        //console.log(`Task sent to shard server ${(loadBalancer as any).data.id}`);
       }
     },
     close(ws, code, reason) {
@@ -164,7 +166,7 @@ function retryDistribute(data: any, attempt: number) {
   if (Number(result) === 0) {
     setTimeout(() => retryDistribute(data, attempt + 1), 10);
   } else {
-    console.log(`Task sent to shard server ${(loadBalancer as any).data.id}`);
+    // console.log(`Task sent to shard server ${(loadBalancer as any).data.id}`);
   }
 }
 
@@ -176,3 +178,8 @@ function tryParsePacket(data: any) {
     return undefined;
   }
 }
+
+setInterval(async () => {
+  console.log(`Total messages per second: ${messages}`);
+  messages = 0;
+}, 1000);

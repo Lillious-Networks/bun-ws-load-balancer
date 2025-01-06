@@ -1,11 +1,16 @@
 import os from "os";
 import cluster from "cluster";
-import transmit from "./modules/transmitter";
+const transmit = {
+    encode(data) {
+      const encoder = new TextEncoder();
+      return encoder.encode(data);
+    },
+  };
 
 const workers = os.availableParallelism();
 
 if (cluster.isPrimary) {
-    let messageCounts: { [key: number]: number } = {};
+    let messageCounts = {};
 
     console.log(`Primary client started with ${workers} workers`);
     for (let i = 0; i < workers; i++) {
@@ -23,7 +28,7 @@ if (cluster.isPrimary) {
     }
 
     setInterval(() => {
-        if (Object.keys(cluster.workers as any).length === 0) {
+        if (Object.keys(cluster.workers).length === 0) {
             process.exit(0);
         }
         const totalMessages = Object.values(messageCounts).reduce((sum, count) => sum + count, 0);
@@ -44,13 +49,11 @@ if (cluster.isPrimary) {
                 })
             ));
             messageCount++;
-        }, 1);
+        }, 0);
     };
 
     socket.onmessage = (event) => {
-        if (!Buffer.isBuffer(event.data)) return socket.close(1000, "Invalid packet received");
-        const data = tryParsePacket(event.data.toString()) as any;
-        if (!data) return socket.close(1000, "Invalid packet received");
+        return;
     };
 
     socket.onclose = () => {
@@ -68,11 +71,12 @@ if (cluster.isPrimary) {
     }, 1000);
 }
 
-function tryParsePacket(data: any) {
+function tryParsePacket(data) {
     try {
+        if (Object.keys(data).length === 0) return undefined;
         return JSON.parse(data.toString());
     } catch (e) {
-        console.log(e as string);
+        console.log(e);
         return undefined;
     }
 }
