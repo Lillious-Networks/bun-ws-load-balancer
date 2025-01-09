@@ -21,29 +21,17 @@ if (cluster.isPrimary) {
             }
         });
     }
-
-    setInterval(() => {
-        if (Object.keys(cluster.workers as any).length === 0) {
-            process.exit(0);
-        }
-        const totalMessages = Object.values(messageCounts).reduce((sum, count) => sum + count, 0);
-        console.log(`Total messages per second: ${totalMessages}`);
-    }, 1000);
 } else {
     const socket = new WebSocket("ws://127.0.0.1:3001");
     let messageCount = 0;
 
+    let batchCount = 1000;
     socket.onopen = () => {
         setInterval(() => {
-            socket.send(transmit.encode(
-                JSON.stringify({
-                    type: "PING",
-                    data: {
-                        message: null,
-                    },
-                })
-            ));
-            messageCount++;
+            for (let i = 0; i < batchCount; i++) {
+                socket.send(transmit.encode(JSON.stringify({ type: "PING" })));
+                messageCount++;
+            }
         }, 1);
     };
 
@@ -70,6 +58,7 @@ if (cluster.isPrimary) {
 
 function tryParsePacket(data: any) {
     try {
+        if (typeof data !== "string") return undefined;
         return JSON.parse(data.toString());
     } catch (e) {
         console.log(e as string);

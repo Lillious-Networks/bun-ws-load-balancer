@@ -19,7 +19,7 @@ socket.onopen = async () => {
   socket.onmessage = (event: any) => {
     if (!Buffer.isBuffer(event.data)) return socket.close(1000, "Invalid packet received");
     const data = tryParsePacket(event.data.toString()) as any;
-    if (!data) return socket.close(1000, "Invalid packet received");
+    if (!data) return;
     if (!data?.key) {
       socket.close(1000, "Invalid or no key provided");
       process.exit(0);
@@ -91,7 +91,6 @@ function tryParsePacket(data: any) {
   try {
     return JSON.parse(data.toString());
   } catch (e) {
-    console.log(e as string);
     return undefined;
   }
 }
